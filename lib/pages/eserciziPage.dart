@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:allenamentofrontend/services/apiService.dart';
 import 'package:allenamentofrontend/models/esercizio.dart';
 import 'package:allenamentofrontend/pages/esercizioPage.dart';
+import 'package:allenamentofrontend/widgets/header/headerWidget.dart';
+import 'package:allenamentofrontend/widgets/navbar/navbarWidget.dart';
+
 
 class EserciziPage extends StatefulWidget {
   final int allenamentoId;
@@ -15,6 +18,7 @@ class EserciziPage extends StatefulWidget {
 class _EserciziPageState extends State<EserciziPage> {
   final ApiService apiService = ApiService();
   late Future<List<Esercizio>> eserciziFuture;
+  Map<int, bool> expandedEsercizi = {};
 
   // Flag per sapere se ci sono stati cambiamenti
   bool hasChanged = false;
@@ -321,98 +325,114 @@ class _EserciziPageState extends State<EserciziPage> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      // Intercetta il ritorno indietro e passa se ci sono state modifiche
       onWillPop: () async {
         Navigator.pop(context, hasChanged);
-        return false;  // Intercetta il pop e lo gestisce manualmente
+        return false;
       },
       child: Scaffold(
-        appBar: AppBar(
-            title: Text("Esercizi"),
-            titleSpacing: 00.0,
-            centerTitle: true,
-            toolbarHeight: 60.2,
-            toolbarOpacity: 0.8
-        ),
-        body: FutureBuilder<List<Esercizio>>(
-          future: eserciziFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: FutureBuilder<List<Esercizio>>(
+            future: eserciziFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            if (snapshot.hasError) {
-              return Center(child: Text('Errore durante il recupero degli esercizi'));
-            }
+              if (snapshot.hasError) {
+                return const Center(child: Text('Errore durante il recupero degli esercizi'));
+              }
 
-            var esercizi = snapshot.data!;
+              var esercizi = snapshot.data ?? [];
 
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: esercizi.length,
-                    itemBuilder: (context, index) {
-                      var esercizio = esercizi[index];
-                      bool isCompleted = esercizio.completato;
+              return CustomScrollView(
+                slivers: [
+                  const Header(title: "Esercizi"),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        var esercizio = esercizi[index];
+                        bool isCompleted = esercizio.completato;
 
-                      return Card(
-                        child: ListTile(
-                          title: Text(esercizio.nome),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Serie: ${esercizio.serie}'),
-                              Text('Ripetizioni: ${esercizio.ripetizioni}'),
-                            ],
-                          ),
-                          trailing: isCompleted
-                              ? Chip(
-                            label: Text(
-                              'Completato',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            backgroundColor: Colors.green, // 🟢 Sfondo verde per completato
-                          )
-                              : Chip(
-                            label: Text(
-                              'Inizia',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            backgroundColor: Colors.blue, // 🔵 Sfondo blu per "Inizia"
-                          ),
-                          onTap: () async {
-                            // Naviga al dettaglio e controlla se c'è stato un cambiamento
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EsercizioDetailPage(esercizio: esercizio),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EsercizioDetailPage(esercizio: esercizio),
+                                ),
+                              );
+
+                              if (result == true) {
+                                setState(() => hasChanged = true);
+                                refreshEsercizi();
+                                checkAllEserciziCompletati();
+                              }
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: esercizio.completato ? Colors.green : Colors.blue,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            );
-
-                            // Se nella pagina di dettaglio c'è stata una modifica
-                            if (result == true) {
-                              setState(() {
-                                hasChanged = true; // ✅ Registra il cambiamento
-                              });
-                              refreshEsercizi();
-                              checkAllEserciziCompletati();
-                            }
-                          },
-                        ),
-                      );
-                    },
+                              child: ListTile(
+                                title: Text(
+                                  esercizio.nome,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Serie: ${esercizio.serie}',
+                                      style: const TextStyle(color: Colors.white70),
+                                    ),
+                                    Text(
+                                      'Ripetizioni: ${esercizio.ripetizioni}',
+                                      style: const TextStyle(color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, color: Colors.black),
+                                      onPressed: () => _modificaEsercizio(esercizio),
+                                      tooltip: 'Modifica esercizio',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                      onPressed: () => _eliminaEsercizio(esercizio.id),
+                                      tooltip: 'Elimina esercizio',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                        },
+                      childCount: esercizi.length,
+                    ),
                   ),
-                ),
-                SizedBox(height: 80),
-              ],
-            );
-          },
+                  SliverToBoxAdapter(child: SizedBox(height: 80)), // spazio extra prima della navbar
+                ],
+              );
+            },
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: refreshEsercizi,
-          child: Icon(Icons.refresh),
-          tooltip: 'Aggiorna Esercizi',
+        bottomNavigationBar: CustomBottomNavBar(
+          selectedIndex: 1,
+          onItemTapped: (index) {
+            if (index == 0) {
+              _aggiungiEsercizio();
+            } else {
+              refreshEsercizi();
+            }
+          },
         ),
       ),
     );

@@ -175,7 +175,6 @@ class allenamentoPageState extends State<AllenamentoPage> {
   void aggiungiAllenamento() {
     TextEditingController nomeController = TextEditingController();
     String? errorMessage;
-
     showDialog(
       context: context,
       builder: (context) {
