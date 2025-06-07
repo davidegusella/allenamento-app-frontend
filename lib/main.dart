@@ -1,31 +1,31 @@
-import 'package:allenamentofrontend/providers/timer/serieTimeProvider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:allenamentofrontend/pages/allenamentoPage.dart';
 
 void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => TimeProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Allenamento App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,  // Consiglio di abilitare Material 3 per avere l'UI più moderna
+        useMaterial3: true,
       ),
-      home: AllenamentoPage(),
+      home: AnimatedSplashScreen(
+        duration: 1,
+        splash: SizedBox(
+          height: 10,
+          child: Image.asset("lib/assets/iconwb.png"),
+        ),
+        nextScreen: AllenamentoPage(),
+        splashTransition: SplashTransition.scaleTransition,
+        backgroundColor: Colors.blue,
+      ),
     );
   }
 }
